@@ -1,3 +1,16 @@
+// using Microsoft.AspNetCore.Identity;
+// using Microsoft.AspNetCore.Authentication.JwtBearer;
+// using Microsoft.IdentityModel.Tokens;
+// using Microsoft.AspNetCore.Builder;
+// using Microsoft.AspNetCore.Hosting;
+// using Microsoft.Extensions.Configuration;
+// using Microsoft.Extensions.DependencyInjection;
+// using Microsoft.Extensions.Hosting;
+// using Microsoft.EntityFrameworkCore;
+// using System.Text;
+// using BookStore.Models;
+// using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -10,6 +23,11 @@ using Microsoft.EntityFrameworkCore;
 using System.Text;
 using BookStore.Models;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using System;
+using System.Threading.Tasks;
+using BookStore.Data;
+
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -44,6 +62,12 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 var app = builder.Build();
 
+using (var scope = app.Services.CreateScope())
+{
+    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+    await RoleSeeder.SeedRolesAsync(roleManager);
+}
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
@@ -59,3 +83,51 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+
+
+async Task CreateRolesAndAdminUser(IServiceProvider serviceProvider)
+{
+    using var scope = serviceProvider.CreateScope();
+    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<User>>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+
+    try
+    {
+        string[] roleNames = { "Admin", "Customer" };
+        foreach (var roleName in roleNames)
+        {
+            var roleExist = await roleManager.RoleExistsAsync(roleName);
+            if (!roleExist)
+            {
+                await roleManager.CreateAsync(new IdentityRole(roleName));
+            }
+        }
+
+        var adminEmail = "admin@admin.com";
+        var adminPassword = "Admin@123";
+
+        var adminUser = new User
+        {
+            UserName = adminEmail,
+            Email = adminEmail,
+            FirstName = "Admin",
+            LastName = "User"
+        };
+
+        var user = await userManager.FindByEmailAsync(adminEmail);
+        if (user == null)
+        {
+            var createAdmin = await userManager.CreateAsync(adminUser, adminPassword);
+            if (createAdmin.Succeeded)
+            {
+                await userManager.AddToRoleAsync(adminUser, "Admin");
+            }
+        }
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "An error occurred creating roles and admin user.");
+    }
+}
