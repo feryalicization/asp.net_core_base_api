@@ -1,16 +1,3 @@
-// using Microsoft.AspNetCore.Identity;
-// using Microsoft.AspNetCore.Authentication.JwtBearer;
-// using Microsoft.IdentityModel.Tokens;
-// using Microsoft.AspNetCore.Builder;
-// using Microsoft.AspNetCore.Hosting;
-// using Microsoft.Extensions.Configuration;
-// using Microsoft.Extensions.DependencyInjection;
-// using Microsoft.Extensions.Hosting;
-// using Microsoft.EntityFrameworkCore;
-// using System.Text;
-// using BookStore.Models;
-// using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
-
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -27,10 +14,12 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 using BookStore.Data;
-
+using BookStore.Utilities;
 
 
 var builder = WebApplication.CreateBuilder(args);
+
+string randomKey = RandomKeyGenerator.GenerateRandomKey(16);
 
 // Add services to the container.
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -56,7 +45,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidIssuer = builder.Configuration["Jwt:Issuer"] ?? "default_issuer",
             ValidAudience = builder.Configuration["Jwt:Issuer"] ?? "default_issuer",
             IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"] ?? "default_key"))
+                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"] ?? randomKey))
         };
     });
 
