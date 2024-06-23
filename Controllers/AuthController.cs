@@ -5,6 +5,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using BookStore.Models;
+using BookStore.Dto;
 using Microsoft.Extensions.Configuration;
 using System.Threading.Tasks;
 using System;

@@ -5,6 +5,8 @@ using BookStore.Models;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using BookStore.Dto;
+
 
 namespace BookStore.Controllers
 {

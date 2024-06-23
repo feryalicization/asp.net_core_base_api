@@ -1,4 +1,4 @@
-namespace BookStore.Models
+namespace BookStore.Dto
 {
     public class OrderItemDto
     {
