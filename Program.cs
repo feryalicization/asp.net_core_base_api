@@ -9,18 +9,22 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.EntityFrameworkCore;
 using System.Text;
 using BookStore.Models;
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 using BookStore.Data;
 using BookStore.Utilities;
 using Microsoft.OpenApi.Models;
+using System.Security.Claims;
+
+
+
 
 
 var builder = WebApplication.CreateBuilder(args);
 
-string randomKey = RandomKeyGenerator.GenerateRandomKey(16);
+// Generate a random key for JWT if not set in configuration
+string randomKey = RandomKeyGenerator.GenerateRandomKey(32); // Ensure 32 bytes for 256 bits
 
 // Add services to the container.
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -55,14 +59,13 @@ builder.Services.AddSwaggerGen(c =>
                 {
                     Type = ReferenceType.SecurityScheme,
                     Id = "Bearer"
-                }
+                },
+                In = ParameterLocation.Header
             },
             new string[] {}
         }
     });
 });
-
-
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -82,10 +85,12 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 var app = builder.Build();
 
+// Seed roles and admin user
 using (var scope = app.Services.CreateScope())
 {
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-    await RoleSeeder.SeedRolesAsync(roleManager);
+    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<User>>();
+    await CreateRolesAndAdminUser(scope.ServiceProvider);
 }
 
 // Configure the HTTP request pipeline.
@@ -104,8 +109,7 @@ app.MapControllers();
 
 app.Run();
 
-
-
+// Method to create roles and an admin user
 async Task CreateRolesAndAdminUser(IServiceProvider serviceProvider)
 {
     using var scope = serviceProvider.CreateScope();
@@ -145,9 +149,41 @@ async Task CreateRolesAndAdminUser(IServiceProvider serviceProvider)
                 await userManager.AddToRoleAsync(adminUser, "Admin");
             }
         }
+        else
+        {
+            var roles = await userManager.GetRolesAsync(user);
+            if (!roles.Contains("Admin"))
+            {
+                await userManager.AddToRoleAsync(user, "Admin");
+            }
+        }
     }
     catch (Exception ex)
     {
         logger.LogError(ex, "An error occurred creating roles and admin user.");
+    }
+}
+
+
+
+async Task SeedRolesAndClaims(IServiceProvider serviceProvider)
+{
+    using var scope = serviceProvider.CreateScope();
+    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+    
+    string[] roleNames = { "Admin", "Customer" };
+    foreach (var roleName in roleNames)
+    {
+        var roleExist = await roleManager.RoleExistsAsync(roleName);
+        if (!roleExist)
+        {
+            var role = new IdentityRole(roleName);
+            await roleManager.CreateAsync(role);
+
+            // Example: Adding claims to roles
+            // Note: Claims are typically permissions or additional role-specific information
+            // You can add claims here or through a separate seeder method
+            await roleManager.AddClaimAsync(role, new Claim(ClaimTypes.Role, roleName));
+        }
     }
 }
