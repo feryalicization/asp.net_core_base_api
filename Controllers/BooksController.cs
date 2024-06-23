@@ -40,7 +40,7 @@ namespace BookStore.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "Admin")]
+        // [Authorize(Roles = "Admin")]
         public async Task<ActionResult<Book>> PostBook([FromBody] BookDto bookDto)
         {
             var book = new Book
@@ -97,41 +97,6 @@ namespace BookStore.Controllers
             return NoContent();
         }
 
-        // POST: api/book/transaction
-        [HttpPost("transaction")]
-        [Authorize]
-        public async Task<IActionResult> MakeTransaction([FromBody] TransactionDto model)
-        {
-            var book = await _context.Books.FindAsync(model.BookId);
-            if (book == null)
-            {
-                return NotFound("Book not found");
-            }
-
-            if (book.Qty < model.Quantity)
-            {
-                return BadRequest("Not enough quantity available");
-            }
-
-            var transaction = new Transaction
-            {
-                CreatedAt = DateTime.UtcNow,
-                UserId = model.UserId,
-                BookId = model.BookId,
-                Quantity = model.Quantity
-            };
-
-            try
-            {
-                _context.Transactions.Add(transaction);
-                book.Qty -= model.Quantity;
-                await _context.SaveChangesAsync();
-                return Ok("Transaction completed successfully");
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Error: {ex.Message}");
-            }
-        }
     }
+
 }

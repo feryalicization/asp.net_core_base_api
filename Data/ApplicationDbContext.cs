@@ -11,21 +11,7 @@ namespace BookStore.Models
         }
         
         public DbSet<Book> Books { get; set; }
-        public DbSet<Transaction> Transactions { get; set; }
-
-        protected override void OnModelCreating(ModelBuilder modelBuilder)
-        {
-            base.OnModelCreating(modelBuilder);
-
-            modelBuilder.Entity<Transaction>()
-                .HasOne(t => t.User)
-                .WithMany()
-                .HasForeignKey(t => t.UserId);
-
-            modelBuilder.Entity<Transaction>()
-                .HasOne(t => t.Book)
-                .WithMany()
-                .HasForeignKey(t => t.BookId);
-        }
+        public DbSet<Order> Orders { get; set; }
+        public DbSet<OrderItem> OrderItems { get; set; }
     }
 }
