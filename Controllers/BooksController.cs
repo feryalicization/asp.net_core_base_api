@@ -2,6 +2,10 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using BookStore.Models;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace BookStore.Controllers
 {
@@ -36,7 +40,7 @@ namespace BookStore.Controllers
         }
 
         [HttpPost]
-        // [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin")]
         public async Task<ActionResult<Book>> PostBook([FromBody] BookDto bookDto)
         {
             var book = new Book
@@ -55,7 +59,7 @@ namespace BookStore.Controllers
         }
 
         [HttpPut("{id}")]
-        // [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> PutBook(int id, [FromBody] BookDto bookDto)
         {
             var book = await _context.Books.FindAsync(id);
@@ -78,7 +82,7 @@ namespace BookStore.Controllers
         }
 
         [HttpDelete("{id}")]
-        // [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteBook(int id)
         {
             var book = await _context.Books.FindAsync(id);
@@ -91,6 +95,43 @@ namespace BookStore.Controllers
             await _context.SaveChangesAsync();
 
             return NoContent();
+        }
+
+        // POST: api/book/transaction
+        [HttpPost("transaction")]
+        [Authorize]
+        public async Task<IActionResult> MakeTransaction([FromBody] TransactionDto model)
+        {
+            var book = await _context.Books.FindAsync(model.BookId);
+            if (book == null)
+            {
+                return NotFound("Book not found");
+            }
+
+            if (book.Qty < model.Quantity)
+            {
+                return BadRequest("Not enough quantity available");
+            }
+
+            var transaction = new Transaction
+            {
+                CreatedAt = DateTime.UtcNow,
+                UserId = model.UserId,
+                BookId = model.BookId,
+                Quantity = model.Quantity
+            };
+
+            try
+            {
+                _context.Transactions.Add(transaction);
+                book.Qty -= model.Quantity;
+                await _context.SaveChangesAsync();
+                return Ok("Transaction completed successfully");
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Error: {ex.Message}");
+            }
         }
     }
 }
